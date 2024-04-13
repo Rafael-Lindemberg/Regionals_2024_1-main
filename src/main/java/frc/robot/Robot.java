@@ -9,12 +9,10 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.commands.IntakeCommand;
-import frc.robot.subsystems.DriveTrain;
-import frc.robot.subsystems.IntakeSubsystem;
-import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.utility.TestCommandScheduler;
 
 
@@ -32,12 +30,21 @@ public class Robot extends TimedRobot {
  private Joystick controller = new Joystick(0);
   private double timer = 0;
 
+   private static final String kDefaultAuto = "Default";
+  private static final String kCustomAuto = "My Auto";
+  private String m_autoSelected;
+  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+
 
   @Override
   public void robotInit() {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
-    
+
+    m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
+    m_chooser.addOption("My Auto", kCustomAuto);
+    SmartDashboard.putData("Auto choices", m_chooser);
+
     //port forward camera
     m_robotContainer = new RobotContainer();
     for (int port = 5800; port <= 5805; port++) {
@@ -74,6 +81,8 @@ public class Robot extends TimedRobot {
   public void autonomousInit() {
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
+    m_autoSelected = m_chooser.getSelected();
+    System.out.println("Auto selected: " + m_autoSelected);
 
     if (m_autonomousCommand != null) {
       m_autonomousCommand.schedule();
@@ -88,6 +97,17 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousPeriodic() {
 
+   switch (m_autoSelected) {
+      case kCustomAuto  :
+        // Put custom auto code here
+        break;
+      case kDefaultAuto: 
+      default:
+        // Put default auto code here
+        break;
+    }
+
+
     // if(timer<3){
     //   drive.holonomicDrive(0, 0.2, 0, true);
     // }
@@ -96,8 +116,6 @@ public class Robot extends TimedRobot {
     // }
 
     //   timer = timer + 0.020;
-
-    
   }
 
   @Override
