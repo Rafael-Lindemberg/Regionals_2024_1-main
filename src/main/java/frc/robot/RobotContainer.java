@@ -22,6 +22,7 @@ import frc.robot.commands.ShooterCommand;
 import frc.robot.commands.AMP.AmpShooter;
 import frc.robot.commands.AMP.AmpShooterMid;
 import frc.robot.commands.autonomous.StartAuto;
+import frc.robot.commands.autonomous.StartAutoTwo;
 import frc.robot.commands.drivetrain.NorthUntilInterupt;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.DriveTrain;
@@ -45,13 +46,12 @@ public class RobotContainer {
   public final IntakeSubsystem m_IntakeSubsystem = new IntakeSubsystem();
   public final ClimberSubsystem m_ClimberSubsystem = new ClimberSubsystem();
 
-      SendableChooser<Command> m_chooser = new SendableChooser<>();
+
     // A simple auto routine that drives forward a specified distance, and then stops.
-  private final Command m_simpleAuto =
-      new StartAuto(m_IntakeSubsystem, m_ShooterSubsystem);
+  private final Command m_shortAuto = new StartAuto(m_IntakeSubsystem, m_ShooterSubsystem);
+  private final Command m_longAuto = new StartAutoTwo(m_IntakeSubsystem, m_ShooterSubsystem);
 
-      m_chooser.setDefaultOption();
-
+      SendableChooser<Command> m_chooser = new SendableChooser<>();
   // A complex auto routine that drives forward, drops a hatch, and then drives backward.
 
   // public final Intake m_intake = Intake.getInstance();
@@ -109,8 +109,10 @@ public class RobotContainer {
     //Autos.load();
 
     configureBindings();
-    m_chooser.setDefaultOption("StartAuto", new StartAuto(m_IntakeSubsystem, m_ShooterSubsystem)); 
-    
+    m_chooser.setDefaultOption("3 Second Intake+Shooter", m_shortAuto);
+    m_chooser.addOption("5 Second Intake+Shooter", m_longAuto);
+    SmartDashboard.putData(m_chooser);
+
     m_DriveTrain.setDefaultCommand(
         new RunCommand(
             () -> {
