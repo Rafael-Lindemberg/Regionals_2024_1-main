@@ -5,9 +5,15 @@
 package frc.robot;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.wpilibj.GenericHID.RumbleType;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -16,22 +22,21 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.commands.IntakeCommand;
-import frc.robot.commands.ReverseIntake;
-import frc.robot.commands.ShooterCommand;
+import frc.robot.LimelightHelpers.LimelightResults;
+import frc.robot.commands.*;
 import frc.robot.commands.AMP.AmpShooter;
 import frc.robot.commands.AMP.AmpShooterMid;
 import frc.robot.commands.autonomous.StartAuto;
 import frc.robot.commands.autonomous.StartAutoTwo;
+import frc.robot.commands.climber.LeftClimberDown;
+import frc.robot.commands.climber.LeftClimberUp;
+import frc.robot.commands.climber.RightClimberDown;
+import frc.robot.commands.climber.RightClimberUp;
 import frc.robot.commands.drivetrain.NorthUntilInterupt;
-import frc.robot.subsystems.ClimberSubsystem;
-import frc.robot.subsystems.DriveTrain;
-import frc.robot.subsystems.IntakeSubsystem;
-import frc.robot.subsystems.ShooterSubsystem;
+import frc.robot.subsystems.*;
 import frc.team1891.common.control.AxisTrigger;
 import frc.team1891.common.control.POVTrigger;
 import frc.team1891.common.control.POVTrigger.POV;
-import frc.team1891.common.logger.BullLogger;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -41,40 +46,35 @@ import frc.team1891.common.logger.BullLogger;
  */
 public class RobotContainer {
   // Subsystems
-  public final DriveTrain m_DriveTrain = new DriveTrain();
+  private boolean       manual                     = false;
+  public final DriveTrain m_DriveTrain             = new DriveTrain();
   public final ShooterSubsystem m_ShooterSubsystem = new ShooterSubsystem();
-  public final IntakeSubsystem m_IntakeSubsystem = new IntakeSubsystem();
+  public final IntakeSubsystem m_IntakeSubsystem   = new IntakeSubsystem();
   public final ClimberSubsystem m_ClimberSubsystem = new ClimberSubsystem();
+  public Translation2d  blueSpeaker                = new Translation2d( 1.3,  6.0);
+  public Translation2d  redSpeaker                 = new Translation2d( 17.7592, 6.0);
+  public Translation2d  origin                     = new Translation2d( 0.0, 0.0 );
+
+  NetworkTable      table = NetworkTableInstance.getDefault().getTable("limelight");
+  NetworkTableEntry tx      = table.getEntry("tx");
+  NetworkTableEntry ty      = table.getEntry("ty");
+  NetworkTableEntry ta      = table.getEntry("ta");
+  NetworkTableEntry tid     = table.getEntry("tid");
+  NetworkTableEntry tl      = table.getEntry("tl");
+  NetworkTableEntry cl      = table.getEntry("cl");
+  NetworkTableEntry botpose = table.getEntry("botpose");
+//  Pose2dFilter      filter  = new Pose2dFilter( true );
 
 
-    // A simple auto routine that drives forward a specified distance, and then stops.
+  //auto commands
   private final Command m_shortAuto = new StartAuto(m_IntakeSubsystem, m_ShooterSubsystem);
-  private final Command m_longAuto = new StartAutoTwo(m_IntakeSubsystem, m_ShooterSubsystem);
+  private final Command m_longAuto  = new StartAutoTwo(m_IntakeSubsystem, m_ShooterSubsystem, m_DriveTrain);
 
-      SendableChooser<Command> m_chooser = new SendableChooser<>();
-  // A complex auto routine that drives forward, drops a hatch, and then drives backward.
+  SendableChooser<Command> m_chooser = new SendableChooser<>();   
 
-  // public final Intake m_intake = Intake.getInstance();
-  // public final GrabbyArm m_arm = GrabbyArm.getInstance();
-  // public final Conveyer m_conveyer = Conveyer.getInstance();
-  // public final Grabber m_Grabber = Grabber.getInstance();
-  // public final PneumaticHub m_Hub = new PneumaticHub();
-
-  // public final MatrixLEDs m_LEDSystem = MatrixLEDs.getInstance();
-
-  // private static final Compressor m_compressor = new Compressor(PneumaticsModuleType.REVPH);
-
-  // This is big bad, but I'm lazy -stephen
-  // public static Compressor getCompressor() {
-  //   return m_compressor;
-  // }
-
-    
-  public static boolean scoringForCubes = false;
   public static double setAngle = 0;
   //private final AbsoluteAngleJoystickDrive m_absoluteDrive = new AbsoluteAngleJoystickDrive(m_DriveTrain, null, null, null);
 
-  BullLogger logger = new BullLogger("Main log", false, false);
   // Replace with CommandPS4Controller or CommandJoystick if needed
 
   // public static final XboxController m_driverController =
@@ -87,7 +87,6 @@ public class RobotContainer {
   public static final XboxController m_driverController = new XboxController(0);
 
 
-  // This is big bad, but I'm lazy -stephen
   public static XboxController getController() {
     return m_driverController;
   }
@@ -96,12 +95,11 @@ public class RobotContainer {
   private AxisTrigger m_rightStickTrig = new AxisTrigger(m_Joystick, XboxController.Axis.kRightX.value,.13);
   private POVTrigger m_POVNorth = new POVTrigger(m_Joystick, POV.NORTH);
 
-  // belt back and forth
-  // grab and drop
 
-    // DEMO BUTTON
-    String number_image = "";
-  public void periodic() {
+
+  public void periodic() { //Reads values periodicly
+ 
+   
 
   }
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -110,41 +108,75 @@ public class RobotContainer {
 
     configureBindings();
     m_chooser.setDefaultOption("3 Second Intake+Shooter", m_shortAuto);
+    m_chooser.addOption("2 Note Autonomous", m_longAuto);
+    SmartDashboard.putData(m_chooser);
+
+    m_chooser.setDefaultOption("StartAuto", new StartAuto(m_IntakeSubsystem, m_ShooterSubsystem)); 
     m_chooser.addOption("5 Second Intake+Shooter", m_longAuto);
     SmartDashboard.putData(m_chooser);
+
 
     m_DriveTrain.setDefaultCommand(
         new RunCommand(
             () -> {
-                m_Joystick.setRumble(RumbleType.kBothRumble, 0.0);
-                final double DEADBAND = .2;
-                double x = m_Joystick.getRawAxis(0);
-                double y = m_Joystick.getRawAxis(1);
-                double z = m_Joystick.getRawAxis(5);
-                if (Math.abs(x) > DEADBAND) {
-                  y = MathUtil.applyDeadband(y, DEADBAND*.6);
-                } else {
+              m_Joystick.setRumble(RumbleType.kBothRumble, 0.0);
+              final double DEADBAND = 0.2;
+  
+              double x = m_Joystick.getRawAxis(0);
+              double y = m_Joystick.getRawAxis(1);
+              double z = m_Joystick.getRawAxis(5);
+  
+              if (Math.abs(x) > DEADBAND) {
+                  y = MathUtil.applyDeadband(y, DEADBAND * 0.6);
+              } else {
                   y = MathUtil.applyDeadband(y, DEADBAND);
-                }
-                 if (Math.abs(y) > DEADBAND) {
-                  x = MathUtil.applyDeadband(x, DEADBAND*.6);
-                } else {
+              }
+  
+              if (Math.abs(y) > DEADBAND) {
+                  x = MathUtil.applyDeadband(x, DEADBAND * 0.6);
+              } else {
                   x = MathUtil.applyDeadband(x, DEADBAND);
-                }
-                z = MathUtil.applyDeadband(z, DEADBAND);
+              }
+  
+              z = MathUtil.applyDeadband(z, DEADBAND);
 
-                
+              final double MAX_ACCELERATION = 0.08;
+              final double MAX_VELOCITY = 2.0; 
+
+              double prevX = 0.0;
+              double prevY = 0.0;
+              double prevZ = 0.0;
+  
+              double deltaX = x - prevX;
+              double deltaY = y - prevY;
+              double deltaZ = z - prevZ;
+  
+
+              deltaX = MathUtil.clamp(deltaX, -MAX_ACCELERATION, MAX_ACCELERATION);
+              deltaY = MathUtil.clamp(deltaY, -MAX_ACCELERATION, MAX_ACCELERATION);
+              deltaZ = MathUtil.clamp(deltaZ, -MAX_ACCELERATION, MAX_ACCELERATION);
+  
+
+              prevX += deltaX;
+              prevY += deltaY;
+              prevZ += deltaZ;
+  
+              prevX = MathUtil.clamp(prevX, -MAX_VELOCITY, MAX_VELOCITY);
+              prevY = MathUtil.clamp(prevY, -MAX_VELOCITY, MAX_VELOCITY);
+              prevZ = MathUtil.clamp(prevZ, -MAX_VELOCITY, MAX_VELOCITY);
+
+              prevX = x;
+              prevY = y;
+              prevZ = z;
 
               if ((m_Joystick.getRawButton(0) || m_Joystick.getRawButton(1) || m_Joystick.getRawButton(15) || m_Joystick.getRawButton(14))){
-                  m_DriveTrain.holonomicDrive(-y/8,-x/8,z/8,true); 
+                  m_DriveTrain.holonomicDrive(-y/4,-x/4,z/4,true); 
               } else if (!m_Joystick.getRawButton(15)){
                   m_DriveTrain.holonomicDrive(-y,-x,z,true);    
               }
               
             }, m_DriveTrain));
-    // if(DriverStation.isDSAttached()) {
-    //   firstLogo.schedule();
-    // }
+
   }
 
   /**
@@ -177,11 +209,45 @@ public class RobotContainer {
     JoystickButton circle = new JoystickButton(m_driverController, 2);
     circle.whileTrue(new AmpShooterMid(m_ShooterSubsystem));
 
-    m_FaceForward.onTrue(new NorthUntilInterupt(m_DriveTrain,()-> m_driverController.getLeftX(),() -> m_driverController.getLeftY(),() -> m_rightStickTrig.getAsBoolean()));
+    JoystickButton test1 = new JoystickButton(m_driverController, 10);
+    test1.whileTrue(new RightClimberUp(m_ClimberSubsystem));
 
-   
-    double tx = LimelightHelpers.getTX("");
+     JoystickButton test2 = new JoystickButton(m_driverController, 9);
+    test2.whileTrue(new LeftClimberUp(m_ClimberSubsystem));
+
+     JoystickButton test3 = new JoystickButton(m_driverController, 3);
+    test3.whileTrue(new LeftClimberDown(m_ClimberSubsystem));
+
+     JoystickButton test4 = new JoystickButton(m_driverController, 1);
+    test4.whileTrue(new RightClimberDown(m_ClimberSubsystem));
+
     
+
+    Command leftClimberUpCommand = new LeftClimberUp(m_ClimberSubsystem);
+    leftClimberUpCommand.addRequirements(m_ClimberSubsystem);
+
+    Command leftClimberDownCommand = new LeftClimberDown(m_ClimberSubsystem);
+    leftClimberDownCommand.addRequirements(m_ClimberSubsystem);
+
+    Command rightClimberUpCommand = new RightClimberUp(m_ClimberSubsystem);
+    rightClimberUpCommand.addRequirements(m_ClimberSubsystem);
+
+    Command rightClimberDownCommand = new RightClimberDown(m_ClimberSubsystem);
+    rightClimberDownCommand.addRequirements(m_ClimberSubsystem);
+
+    if (m_driverController.getRawAxis(1) > 0.5) {
+        leftClimberUpCommand.schedule();
+    } else if (m_driverController.getRawAxis(1) < -0.5) {
+        leftClimberDownCommand.schedule();
+    }
+
+    if (m_driverController.getRawAxis(1) > 0.5) {
+      rightClimberUpCommand.schedule();
+    } else if (m_driverController.getRawAxis(1) < -0.5) {
+      rightClimberDownCommand.schedule();
+    }
+
+
     //m_alignToPlaceButton.onTrue(new DriveToPose(m_DriveTrain, ()-> m_DriveTrain.pickConeScoringArea().getPose2d(), () -> m_leftrightTrigger.or(m_forwardBack.or(m_rightStickTrig)).getAsBoolean()));
       //m_alignToPlaceButton.onTrue(new ConditionalCommand(
       //new DriveToPose(m_DriveTrain, ()-> m_DriveTrain.pickCubeScoringArea().getPose2d(), () -> m_leftrightTrigger.or(m_forwardBack.or(m_rightStickTrig)).getAsBoolean()),
@@ -234,3 +300,6 @@ public class RobotContainer {
     return m_chooser.getSelected();
   }
 }
+
+
+

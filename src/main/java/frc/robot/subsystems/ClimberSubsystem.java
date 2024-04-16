@@ -1,27 +1,42 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import com.ctre.phoenix6.hardware.TalonFX;
+public class ClimberSubsystem extends SubsystemBase{
 
-public class ClimberSubsystem extends SubsystemBase {
-    private final com.ctre.phoenix6.hardware.TalonFX  climberMotor;
+    private final com.ctre.phoenix6.hardware.TalonFX  rightClimberMotor;
+    private final com.ctre.phoenix6.hardware.TalonFX  leftClimberMotor;
 
-    public ClimberSubsystem() {
-         climberMotor = new TalonFX(17);
+       public ClimberSubsystem() {
+
+         rightClimberMotor = new TalonFX(17);
+         leftClimberMotor = new TalonFX(18);
     }
 
-    public void moveUp(double speed) {   
-        climberMotor.set(speed);
+    public void setRightClimberDown(double speed) {   
+        rightClimberMotor.set(speed*-1);
     }
 
-    public void moveDown(double speed){
-        climberMotor.set(speed*-1);
+    public void setLeftClimberDown(double speed){
+        leftClimberMotor.set(speed*-1);
     }
 
-    public void stop() {
-        climberMotor.set(0);
+    
+    public void setRightClimberUp(double speed) {   
+        rightClimberMotor.set(speed);
     }
 
+    public void setLeftClimberUp(double speed){
+        leftClimberMotor.set(speed);
+    }
+
+    public void stopRight() {
+        rightClimberMotor.set(0);
+    }
+
+        public void stopLeft() {
+        leftClimberMotor.set(0);
+    }
 }

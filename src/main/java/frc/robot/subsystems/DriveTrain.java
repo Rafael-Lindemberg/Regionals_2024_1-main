@@ -23,6 +23,7 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.util.CircularBuffer;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
@@ -102,7 +103,7 @@ public class DriveTrain extends SwerveDrivetrain {
   private static final ShuffleboardTab _shuffuleboardTab = Shuffleboard.getTab("Drivetrain");
   public static final DrivetrainConfig _config = new DrivetrainConfig(maxMetersPerSecond, .5, 7, 2, Units.inchesToMeters(2), 6.75, 2048);
   // public static final SimNavX _gyro = new SimNavX(SPI.Port.kMXP);
-  public static final SimNavX _gyro = new SimNavX(SPI.Port.kMXP);  
+  public static final SimNavX _gyro = new SimNavX(SerialPort.Port.kUSB1);  
   
   private static final TalonFX frontLeftDrive = new TalonFX(Constants.Drivetrain.FRONT_LEFT_DRIVE_CHANNEL);
   private static final TalonFX frontLeftSteer = new TalonFX(Constants.Drivetrain.FRONT_LEFT_STEER_CHANNEL);
