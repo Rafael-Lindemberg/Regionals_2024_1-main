@@ -5,15 +5,13 @@
 package frc.robot;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -22,18 +20,21 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.LimelightHelpers.LimelightResults;
-import frc.robot.commands.*;
+import frc.robot.commands.IntakeCommand;
+import frc.robot.commands.ReverseIntake;
+import frc.robot.commands.ShooterCommand;
 import frc.robot.commands.AMP.AmpShooter;
 import frc.robot.commands.AMP.AmpShooterMid;
 import frc.robot.commands.autonomous.StartAuto;
 import frc.robot.commands.autonomous.StartAutoTwo;
-import frc.robot.commands.climber.LeftClimberDown;
-import frc.robot.commands.climber.LeftClimberUp;
-import frc.robot.commands.climber.RightClimberDown;
-import frc.robot.commands.climber.RightClimberUp;
+import frc.robot.commands.climber.SetLeftClimber;
+import frc.robot.commands.climber.SetRightClimber;
 import frc.robot.commands.drivetrain.NorthUntilInterupt;
-import frc.robot.subsystems.*;
+import frc.robot.subsystems.DriveTrain;
+import frc.robot.subsystems.IntakeSubsystem;
+import frc.robot.subsystems.LeftClimberSubsystem;
+import frc.robot.subsystems.RightClimberSubsystem;
+import frc.robot.subsystems.ShooterSubsystem;
 import frc.team1891.common.control.AxisTrigger;
 import frc.team1891.common.control.POVTrigger;
 import frc.team1891.common.control.POVTrigger.POV;
@@ -50,7 +51,8 @@ public class RobotContainer {
   public final DriveTrain m_DriveTrain             = new DriveTrain();
   public final ShooterSubsystem m_ShooterSubsystem = new ShooterSubsystem();
   public final IntakeSubsystem m_IntakeSubsystem   = new IntakeSubsystem();
-  public final ClimberSubsystem m_ClimberSubsystem = new ClimberSubsystem();
+  public final RightClimberSubsystem m_rightClimber = new RightClimberSubsystem();
+  public final LeftClimberSubsystem m_leftClimber = new LeftClimberSubsystem();
   public Translation2d  blueSpeaker                = new Translation2d( 1.3,  6.0);
   public Translation2d  redSpeaker                 = new Translation2d( 17.7592, 6.0);
   public Translation2d  origin                     = new Translation2d( 0.0, 0.0 );
@@ -73,6 +75,7 @@ public class RobotContainer {
   SendableChooser<Command> m_chooser = new SendableChooser<>();   
 
   public static double setAngle = 0;
+  
   //private final AbsoluteAngleJoystickDrive m_absoluteDrive = new AbsoluteAngleJoystickDrive(m_DriveTrain, null, null, null);
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
@@ -83,6 +86,7 @@ public class RobotContainer {
   //       return MathUtil.applyDeadband(super.getRawAxis(axis), .15);
   //     };
   // };
+
   private final Joystick m_Joystick = new Joystick(1);
   public static final XboxController m_driverController = new XboxController(0);
 
@@ -109,10 +113,6 @@ public class RobotContainer {
     configureBindings();
     m_chooser.setDefaultOption("3 Second Intake+Shooter", m_shortAuto);
     m_chooser.addOption("2 Note Autonomous", m_longAuto);
-    SmartDashboard.putData(m_chooser);
-
-    m_chooser.setDefaultOption("StartAuto", new StartAuto(m_IntakeSubsystem, m_ShooterSubsystem)); 
-    m_chooser.addOption("5 Second Intake+Shooter", m_longAuto);
     SmartDashboard.putData(m_chooser);
 
 
@@ -177,6 +177,9 @@ public class RobotContainer {
               
             }, m_DriveTrain));
 
+m_leftClimber.setDefaultCommand(new SetLeftClimber(m_leftClimber, m_driverController));
+m_rightClimber.setDefaultCommand(new SetRightClimber(m_rightClimber, m_driverController));
+
   }
 
   /**
@@ -209,43 +212,9 @@ public class RobotContainer {
     JoystickButton circle = new JoystickButton(m_driverController, 2);
     circle.whileTrue(new AmpShooterMid(m_ShooterSubsystem));
 
-    JoystickButton test1 = new JoystickButton(m_driverController, 10);
-    test1.whileTrue(new RightClimberUp(m_ClimberSubsystem));
 
-     JoystickButton test2 = new JoystickButton(m_driverController, 9);
-    test2.whileTrue(new LeftClimberUp(m_ClimberSubsystem));
 
-     JoystickButton test3 = new JoystickButton(m_driverController, 3);
-    test3.whileTrue(new LeftClimberDown(m_ClimberSubsystem));
 
-     JoystickButton test4 = new JoystickButton(m_driverController, 1);
-    test4.whileTrue(new RightClimberDown(m_ClimberSubsystem));
-
-    
-
-    Command leftClimberUpCommand = new LeftClimberUp(m_ClimberSubsystem);
-    leftClimberUpCommand.addRequirements(m_ClimberSubsystem);
-
-    Command leftClimberDownCommand = new LeftClimberDown(m_ClimberSubsystem);
-    leftClimberDownCommand.addRequirements(m_ClimberSubsystem);
-
-    Command rightClimberUpCommand = new RightClimberUp(m_ClimberSubsystem);
-    rightClimberUpCommand.addRequirements(m_ClimberSubsystem);
-
-    Command rightClimberDownCommand = new RightClimberDown(m_ClimberSubsystem);
-    rightClimberDownCommand.addRequirements(m_ClimberSubsystem);
-
-    if (m_driverController.getRawAxis(1) > 0.5) {
-        leftClimberUpCommand.schedule();
-    } else if (m_driverController.getRawAxis(1) < -0.5) {
-        leftClimberDownCommand.schedule();
-    }
-
-    if (m_driverController.getRawAxis(1) > 0.5) {
-      rightClimberUpCommand.schedule();
-    } else if (m_driverController.getRawAxis(1) < -0.5) {
-      rightClimberDownCommand.schedule();
-    }
 
 
     //m_alignToPlaceButton.onTrue(new DriveToPose(m_DriveTrain, ()-> m_DriveTrain.pickConeScoringArea().getPose2d(), () -> m_leftrightTrigger.or(m_forwardBack.or(m_rightStickTrig)).getAsBoolean()));
@@ -299,6 +268,7 @@ public class RobotContainer {
   public Command getAutonomousCommand() {
     return m_chooser.getSelected();
   }
+  
 }
 
 
